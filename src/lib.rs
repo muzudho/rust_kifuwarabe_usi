@@ -395,6 +395,24 @@ impl fmt::Display for Piece{
         }
     }
 }
+/// 持ち駒
+pub const HAND_PIECE_ARRAY_LN : usize = 14;
+pub const HAND_PIECE_ARRAY : [Piece; HAND_PIECE_ARRAY_LN] = [
+    Piece::R0,// ▲飛
+    Piece::B0,// ▲角
+    Piece::G0,// ▲金
+    Piece::S0,// ▲銀
+    Piece::N0,// ▲桂
+    Piece::L0,// ▲香
+    Piece::P0,// ▲歩
+    Piece::R1,// ▽飛
+    Piece::B1,// ▽角
+    Piece::G1,// ▽金
+    Piece::S1,// ▽銀
+    Piece::N1,// ▽桂
+    Piece::L1,// ▽香
+    Piece::P1// ▽歩
+];
 
 
 
