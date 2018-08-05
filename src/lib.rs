@@ -105,6 +105,18 @@ pub struct UsiMovement{
     pub destination_rank : i8,
     pub promotion : bool,
 }
+impl UsiMovement{
+    pub fn new()->UsiMovement{
+        UsiMovement{
+            source_file : 0,
+            source_rank : 0,
+            drop : PieceType::Space,
+            destination_file : 0,
+            destination_rank : 0,
+            promotion : false,
+        }
+    }
+}
 impl fmt::Display for UsiMovement{
     fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
 
@@ -134,7 +146,7 @@ impl fmt::Display for UsiMovement{
                         N => { "N" },
                         L => { "L" },
                         P => { "P" },
-                        _  => { "?" },
+                        _  => { panic!("Drop: {}", self.drop); },
                     },
                     self.destination_file,
                     num_to_lower_case(self.destination_rank),
