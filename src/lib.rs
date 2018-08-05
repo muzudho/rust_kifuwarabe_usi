@@ -64,7 +64,7 @@ pub enum PieceType{
 impl fmt::Display for PieceType{
     fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
         // 文字列リテラルでないとダメみたいなんで、他に似たようなコードがあるのに、また書くことに☆（＾～＾）
-        use tusin::usi::PieceType::*;
+        use PieceType::*;
         match *self{
             K => { write!(f,"玉")},
             R => { write!(f,"飛")},
@@ -124,16 +124,16 @@ impl fmt::Display for UsiMovement{
              },
              _ => {
                 // 打なら
-                use tusin::usi::PieceType::*;
+                use PieceType::*;
                 write!(f, "{}*{}{}{}",
                     match self.drop {
-                        PieceType::R => { "R" },
-                        PieceType::B => { "B" },
-                        PieceType::G => { "G" },
-                        PieceType::S => { "S" },
-                        PieceType::N => { "N" },
-                        PieceType::L => { "L" },
-                        PieceType::P => { "P" },
+                        R => { "R" },
+                        B => { "B" },
+                        G => { "G" },
+                        S => { "S" },
+                        N => { "N" },
+                        L => { "L" },
+                        P => { "P" },
                         _  => { "?" },
                     },
                     self.destination_file,
@@ -343,7 +343,7 @@ pub enum Piece{
 impl fmt::Display for Piece{
     fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
         // 文字列リテラルでないとダメみたいなんで、他に似たようなコードがあるのに、また書くことに☆（＾～＾）
-        use tusin::usi::Piece::*;
+        use Piece::*;
         match *self{
             K0 => { write!(f,"▼玉")},
             R0 => { write!(f,"▼飛")},
@@ -393,7 +393,7 @@ pub fn file_rank_to_cell(file:i8, rank:i8)->usize{
 /// TODO position コマンド 盤上部分のみ 読取
 pub fn parse_banjo(line:&String, starts:&mut usize, len:usize) -> [Piece;100] {
 
-    use tusin::usi::Piece::Space;
+    use Piece::Space;
     // 初期局面の盤面
     let mut ban = [
         Space,Space,Space,Space,Space,Space,Space,Space,Space,Space,
@@ -409,7 +409,7 @@ pub fn parse_banjo(line:&String, starts:&mut usize, len:usize) -> [Piece;100] {
     ];
 
     // 盤部
-    use tusin::usi::Piece;
+    use Piece;
     let mut file = FILE9;//９筋から右方向へ読取
     let mut rank = RANK1;
     'ban: while 0<(len-*starts) {
