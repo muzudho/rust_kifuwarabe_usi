@@ -1,18 +1,14 @@
-/// USIプロトコル Rustフレームワーク
+/// コンピューター将棋 通信部 USIプロトコル Rustフレームワーク
 use std::fmt;
 
-// FILE0 は投了フラグとしても使用。
-pub const FILE0: i8 = 0;
+/// Fileは筋、Rankは段。1～9を使用。
+pub const FILE0: i8 = 0; // 0筋は投了フラグとしても使用。
 pub const FILE9: i8 = 9;
 pub const FILE10: i8 = 10;
 pub const RANK0: i8 = 0;
 pub const RANK1: i8 = 1;
 pub const RANK10: i8 = 10;
-/// USIプロトコル表記: 平手初期局面（の盤上の駒配置部分のみ）
-pub const STARTPOS_LN: usize = 57;
-pub const STARTPOS: &'static str = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL";
-
-/// 指し手のために、段をアルファベットにすることを想定
+/// 1～9段を a～i段に変換。
 pub fn num_to_lower_case(num:i8)->&'static str{
     match num{
         1 =>{"a"},
@@ -27,6 +23,16 @@ pub fn num_to_lower_case(num:i8)->&'static str{
         _ =>{panic!("[{}] to lower case.", num)},
     }
 }
+pub fn file_rank_to_cell(file:i8, rank:i8)->usize{
+    debug_assert!(
+            (FILE0<file && file<FILE10)
+         && (RANK0<rank && rank<RANK10)
+         , "(204)file_rank_to_cell file={},rank={}",file, rank);
+
+    (file*10 + rank) as usize
+}
+pub const STARTPOS_LN: usize = 57;
+pub const STARTPOS: &'static str = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL";
 
 /// 駒種類。先後なしの駒と空白。
 #[derive(Copy, Clone)]
@@ -88,213 +94,6 @@ impl fmt::Display for PieceType{
         }
     }
 }
-
-/// 指し手。最大で５桁の文字列。
-///
-/// # Members.
-/// 
-/// * `source_file` - 移動元の筋。
-/// * `source_rank` - 移動元の段。
-/// * `drop` - 打の場合、打った駒種類。
-/// * `destination_file` - 移動先の筋。
-/// * `destination_rank` - 移動先の段。
-/// * `promotion` - 移動後に成るなら真。
-#[derive(Copy,Clone)]
-pub struct UsiMovement{
-    pub source_file : i8,
-    pub source_rank : i8,
-    pub drop : PieceType,
-    pub destination_file : i8,
-    pub destination_rank : i8,
-    pub promotion : bool,
-}
-impl UsiMovement{
-    pub fn new()->UsiMovement{
-        UsiMovement{
-            source_file : 0,
-            source_rank : 0,
-            drop : PieceType::Space,
-            destination_file : 0,
-            destination_rank : 0,
-            promotion : false,
-        }
-    }
-}
-impl fmt::Display for UsiMovement{
-    fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
-
-        // 0筋に移動したら 投了する。
-        if self.destination_file==FILE0 { return write!(f,"resign"); }
-
-        match self.drop {
-             PieceType::Space => {
-                 // 打でないなら
-                write!(f, "{}{}{}{}{}",
-                    self.source_file,
-                    num_to_lower_case(self.source_rank),
-                    self.destination_file,
-                    num_to_lower_case(self.destination_rank),
-                    if self.promotion {"+"}else{""}
-                )
-             },
-             _ => {
-                // 打なら
-                use PieceType::*;
-                write!(f, "{}*{}{}{}",
-                    match self.drop {
-                        R => { "R" },
-                        B => { "B" },
-                        G => { "G" },
-                        S => { "S" },
-                        N => { "N" },
-                        L => { "L" },
-                        P => { "P" },
-                        _  => { panic!("Drop: {}", self.drop); },
-                    },
-                    self.destination_file,
-                    num_to_lower_case(self.destination_rank),
-                    if self.promotion {"+"}else{""}
-                )
-            }
-        }
-    }
-}
-impl fmt::Debug for UsiMovement{
-    fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Movement(src:{} {}, dst:{} {}, pro:{}, drop:{})",
-            self.source_file,
-            self.source_rank,
-            self.destination_file,
-            self.destination_rank,
-            self.promotion, self.drop)
-    }
-}
-
-/// 指し手文字列から、打った駒種類を抽出します。
-///
-/// # Examples input.
-/// 
-/// * `7g7f`
-/// * `B*5e`
-/// * `3d3c+`
-/// 
-/// # Examples return.
-/// 
-/// * (true, ...) - Successful.
-/// * (false, ...) - End parse.
-pub fn parse_movement(
-    line: &String,
-    starts: &mut usize,
-    len: usize
-) -> (bool, UsiMovement) {
-
-    let mut result = UsiMovement{
-        source_file : -1,
-        source_rank : -1,
-        drop : PieceType::Space,
-        destination_file : -1,
-        destination_rank : -1,
-        promotion : false,
-    };
-
-    // 4文字か5文字あるはず。
-    if (len-*starts)<4{
-        // 指し手読取終了時にここを通るぜ☆（＾～＾）
-        // 残り４文字もない。
-        return (false, result);
-    }
-
-    // 1文字目と2文字目
-    match &line[*starts..(*starts+1)]{
-        // 1文字目が駒だったら打。2文字目は必ず「*」なはずなので読み飛ばす。
-        "R" => { *starts+= 2; result.drop= PieceType::R },
-        "B" => { *starts+= 2; result.drop= PieceType::B },
-        "G" => { *starts+= 2; result.drop= PieceType::G },
-        "S" => { *starts+= 2; result.drop= PieceType::S },
-        "N" => { *starts+= 2; result.drop= PieceType::N },
-        "L" => { *starts+= 2; result.drop= PieceType::L },
-        "P" => { *starts+= 2; result.drop= PieceType::P },
-        _ => {
-            // 残りは「筋の数字」、「段のアルファベット」のはず。
-            result.source_file = match &line[*starts..(*starts+1)]{
-                "1" => 1,
-                "2" => 2,
-                "3" => 3,
-                "4" => 4,
-                "5" => 5,
-                "6" => 6,
-                "7" => 7,
-                "8" => 8,
-                "9" => 9,
-                _ => {panic!(format!("(1) '{}' だった。", &line[*starts..(*starts+1)]));},
-            };
-            *starts+=1;
-
-            result.source_rank = match &line[*starts..(*starts+1)]{
-                "a" => 1,
-                "b" => 2,
-                "c" => 3,
-                "d" => 4,
-                "e" => 5,
-                "f" => 6,
-                "g" => 7,
-                "h" => 8,
-                "i" => 9,
-                _ => {panic!(format!("(2) '{}' だった。", &line[*starts..(*starts+1)]));},
-            };
-            *starts+=1;
-        },
-    }
-
-    // 3文字目
-    result.destination_file = match &line[*starts..(*starts+1)]{
-        "1" => 1,
-        "2" => 2,
-        "3" => 3,
-        "4" => 4,
-        "5" => 5,
-        "6" => 6,
-        "7" => 7,
-        "8" => 8,
-        "9" => 9,
-        _ => {panic!(format!("(3) '{}' だった。", &line[*starts..(*starts+1)]));},
-    };
-    *starts+=1;
-    
-    // 4文字目
-    result.destination_rank = match &line[*starts..(*starts+1)]{
-        "a" => 1,
-        "b" => 2,
-        "c" => 3,
-        "d" => 4,
-        "e" => 5,
-        "f" => 6,
-        "g" => 7,
-        "h" => 8,
-        "i" => 9,
-        _ => {panic!(format!("(4) '{}' だった。", &line[*starts..(*starts+1)]));},
-    };
-    *starts+=1;
-    
-    // 5文字に「+」があれば成り。
-    if 0<(len-*starts) && &line[*starts..(*starts+1)]=="+" {
-        result.promotion = true;
-        *starts+=1;
-    }
-
-    // 続きにスペース「 」が１つあれば読み飛ばす
-    if 0<(len-*starts) && &line[*starts..(*starts+1)]==" " {
-        *starts+=1;
-    }
-
-    // 残りは「筋の数字」、「段のアルファベット」のはず。成り
-    return (true, result);
-}
-
-
-
-
-
 
 /// 先後付きの駒と空白
 #[derive(Copy, Clone)]
@@ -438,17 +237,106 @@ pub fn hand_piece_to_num(pc: Piece) -> usize {
 }
 
 
+/// 指し手。4～5桁の文字列に詰め込まれている項目。
+///
+/// # Members.
+/// 
+/// * `source_file` - 移動元の筋。
+/// * `source_rank` - 移動元の段。
+/// * `drop` - 打の場合、打った駒種類。
+/// * `destination_file` - 移動先の筋。
+/// * `destination_rank` - 移動先の段。
+/// * `promotion` - 移動後に成るなら真。
+#[derive(Copy,Clone)]
+pub struct UsiMovement{
+    pub source_file : i8,
+    pub source_rank : i8,
+    pub drop : PieceType,
+    pub destination_file : i8,
+    pub destination_rank : i8,
+    pub promotion : bool,
+}
+impl UsiMovement{
+    pub fn new()->UsiMovement{
+        UsiMovement{
+            source_file : 0,
+            source_rank : 0,
+            drop : PieceType::Space,
+            destination_file : 0,
+            destination_rank : 0,
+            promotion : false,
+        }
+    }
+}
+impl fmt::Display for UsiMovement{
+    fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
 
-pub fn file_rank_to_cell(file:i8, rank:i8)->usize{
-    debug_assert!(
-            (FILE0<file && file<FILE10)
-         && (RANK0<rank && rank<RANK10)
-         , "(204)file_rank_to_cell file={},rank={}",file, rank);
+        // 0筋に移動したら 投了する。
+        if self.destination_file==FILE0 { return write!(f,"resign"); }
 
-    (file*10 + rank) as usize
+        match self.drop {
+             PieceType::Space => {
+                 // 打でないなら
+                write!(f, "{}{}{}{}{}",
+                    self.source_file,
+                    num_to_lower_case(self.source_rank),
+                    self.destination_file,
+                    num_to_lower_case(self.destination_rank),
+                    if self.promotion {"+"}else{""}
+                )
+             },
+             _ => {
+                // 打なら
+                use PieceType::*;
+                write!(f, "{}*{}{}{}",
+                    match self.drop {
+                        R => { "R" },
+                        B => { "B" },
+                        G => { "G" },
+                        S => { "S" },
+                        N => { "N" },
+                        L => { "L" },
+                        P => { "P" },
+                        _  => { panic!("Drop: {}", self.drop); },
+                    },
+                    self.destination_file,
+                    num_to_lower_case(self.destination_rank),
+                    if self.promotion {"+"}else{""}
+                )
+            }
+        }
+    }
+}
+impl fmt::Debug for UsiMovement{
+    fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Movement(src:{} {}, dst:{} {}, pro:{}, drop:{})",
+            self.source_file,
+            self.source_rank,
+            self.destination_file,
+            self.destination_rank,
+            self.promotion, self.drop)
+    }
 }
 
-/// TODO position コマンド 盤上部分のみ 読取
+
+pub fn starts_with(
+    line: &String,
+    starts: &mut usize,
+    keyword: &str
+) -> bool {
+    // ラインの長さ
+    let line_len = line.chars().count();
+    // キーワードの長さ
+    let keyword_len = keyword.chars().count();
+
+    if keyword_len<(line_len-*starts+1) && &line[*starts..(*starts+keyword_len)]==keyword {
+        return true;
+    }
+    return false;
+}
+
+
+/// position コマンドの盤上部分のみ 字句解析。
 pub fn parse_banjo(line:&String, starts:&mut usize, len:usize) -> [Piece;100] {
 
     use Piece::Space;
@@ -563,7 +451,7 @@ pub fn parse_hand_piece(line:&String, starts:&mut usize, len:usize) -> [i8; HAND
     let mut hand_count_arr = [0i8; HAND_PIECE_ARRAY_LN];
 
     // 持ち駒の読取
-    if 0<(len-*starts) && &line[*starts..(*starts+1)]=="-"{
+    if starts_with(line, starts, "-") {
         *starts += 1;
     } else {
         'mg:loop{
@@ -625,6 +513,127 @@ pub fn parse_hand_piece(line:&String, starts:&mut usize, len:usize) -> [i8; HAND
     return hand_count_arr;
 }
 
+/// 指し手文字列から、打った駒種類を抽出します。
+///
+/// # Examples input.
+/// 
+/// * `7g7f`
+/// * `B*5e`
+/// * `3d3c+`
+/// 
+/// # Examples return.
+/// 
+/// * (true, ...) - Successful.
+/// * (false, ...) - End parse.
+pub fn parse_movement(
+    line: &String,
+    starts: &mut usize,
+    len: usize
+) -> (bool, UsiMovement) {
+
+    let mut result = UsiMovement{
+        source_file : -1,
+        source_rank : -1,
+        drop : PieceType::Space,
+        destination_file : -1,
+        destination_rank : -1,
+        promotion : false,
+    };
+
+    // 4文字か5文字あるはず。
+    if (len-*starts)<4{
+        // 指し手読取終了時にここを通るぜ☆（＾～＾）
+        // 残り４文字もない。
+        return (false, result);
+    }
+
+    // 1文字目と2文字目
+    match &line[*starts..(*starts+1)]{
+        // 1文字目が駒だったら打。2文字目は必ず「*」なはずなので読み飛ばす。
+        "R" => { *starts+= 2; result.drop= PieceType::R },
+        "B" => { *starts+= 2; result.drop= PieceType::B },
+        "G" => { *starts+= 2; result.drop= PieceType::G },
+        "S" => { *starts+= 2; result.drop= PieceType::S },
+        "N" => { *starts+= 2; result.drop= PieceType::N },
+        "L" => { *starts+= 2; result.drop= PieceType::L },
+        "P" => { *starts+= 2; result.drop= PieceType::P },
+        _ => {
+            // 残りは「筋の数字」、「段のアルファベット」のはず。
+            result.source_file = match &line[*starts..(*starts+1)]{
+                "1" => 1,
+                "2" => 2,
+                "3" => 3,
+                "4" => 4,
+                "5" => 5,
+                "6" => 6,
+                "7" => 7,
+                "8" => 8,
+                "9" => 9,
+                _ => {panic!(format!("(1) '{}' だった。", &line[*starts..(*starts+1)]));},
+            };
+            *starts+=1;
+
+            result.source_rank = match &line[*starts..(*starts+1)]{
+                "a" => 1,
+                "b" => 2,
+                "c" => 3,
+                "d" => 4,
+                "e" => 5,
+                "f" => 6,
+                "g" => 7,
+                "h" => 8,
+                "i" => 9,
+                _ => {panic!(format!("(2) '{}' だった。", &line[*starts..(*starts+1)]));},
+            };
+            *starts+=1;
+        },
+    }
+
+    // 3文字目
+    result.destination_file = match &line[*starts..(*starts+1)]{
+        "1" => 1,
+        "2" => 2,
+        "3" => 3,
+        "4" => 4,
+        "5" => 5,
+        "6" => 6,
+        "7" => 7,
+        "8" => 8,
+        "9" => 9,
+        _ => {panic!(format!("(3) '{}' だった。", &line[*starts..(*starts+1)]));},
+    };
+    *starts+=1;
+    
+    // 4文字目
+    result.destination_rank = match &line[*starts..(*starts+1)]{
+        "a" => 1,
+        "b" => 2,
+        "c" => 3,
+        "d" => 4,
+        "e" => 5,
+        "f" => 6,
+        "g" => 7,
+        "h" => 8,
+        "i" => 9,
+        _ => {panic!(format!("(4) '{}' だった。", &line[*starts..(*starts+1)]));},
+    };
+    *starts+=1;
+    
+    // 5文字に「+」があれば成り。
+    if starts_with(line, starts, "+") {
+        result.promotion = true;
+        *starts+=1;
+    }
+
+    // 続きにスペース「 」が１つあれば読み飛ばす
+    if starts_with(line, starts, " ") {
+        *starts+=1;
+    }
+
+    // 残りは「筋の数字」、「段のアルファベット」のはず。成り
+    return (true, result);
+}
+
 /// position コマンド読取
 pub fn parse_position(
     line: &String,
@@ -641,7 +650,7 @@ pub fn parse_position(
 
 
     let ban : [Piece;100];
-    if 16<(len-starts) && &line[starts..(starts+17)]=="position startpos"{
+    if starts_with(line, &mut starts, "position startpos") {
         // 'position startpos' を読み飛ばし
         starts += 17;
         // 別途用意した平手初期局面文字列を読取
@@ -650,28 +659,28 @@ pub fn parse_position(
         // position コマンド 盤上部分のみ 読取
         ban = parse_banjo(&STARTPOS.to_string(), &mut local_starts, STARTPOS_LN);
 
-        if 0<(len-starts) && &line[starts..(starts+1)]==" "{
+        if starts_with(line, &mut starts, " ") {
             // ' ' を読み飛ばした。
             starts += 1;
         }
-    }else if 13<(len-starts) && &line[starts..(starts+14)]=="position sfen "{
+    }else if starts_with(line, &mut starts, "position sfen ") {
         starts += 14; // 'position sfen ' を読み飛ばし
 
         // position コマンド 盤上部分のみ 読取
         ban = parse_banjo(&line, &mut starts, len);
 
-        if 0<(len-starts) && &line[starts..(starts+1)]==" "{
+        if starts_with(line, &mut starts, " ") {
             starts += 1;
         }
 
         // 先後も読み飛ばす。
-        if 0<(len-starts) && &line[starts..(starts+1)]=="w"{
+        if starts_with(line, &mut starts, "w") {
             starts += 1;
-        }else if 0<(len-starts) && &line[starts..(starts+1)]=="b"{
+        }else if starts_with(line, &mut starts, "b") {
             starts += 1;
         }
 
-        if 0<(len-starts) && &line[starts..(starts+1)]==" "{
+        if starts_with(line, &mut starts, " ") {
             starts += 1;
         }
 
@@ -680,7 +689,7 @@ pub fn parse_position(
         callback0(hand_count_arr);
 
 
-        if 2<(len-starts) && &line[starts..(starts+3)]==" 1 "{
+        if starts_with(line, &mut starts, " 1 ") {
             starts += 3;
         }
     }else{
@@ -690,11 +699,11 @@ pub fn parse_position(
     // 盤を返す。
     callback1(ban);
 
-    if 4<(len-starts) && &line[starts..(starts+5)]=="moves"{
+    if starts_with(line, &mut starts, "moves") {
         starts += 5;
     }
 
-    if 0<(len-starts) && &line[starts..(starts+1)]==" "{
+    if starts_with(line, &mut starts, " ") {
         starts += 1;
     }
 
