@@ -2,12 +2,15 @@
 use std::fmt;
 
 // FILE0 は投了フラグとしても使用。
-pub const FILE0 :i8 = 0;
-pub const FILE9 :i8 = 9;
-pub const FILE10 :i8 = 10;
-pub const RANK0 :i8 = 0;
-pub const RANK1 :i8 = 1;
-pub const RANK10 :i8 = 10;
+pub const FILE0: i8 = 0;
+pub const FILE9: i8 = 9;
+pub const FILE10: i8 = 10;
+pub const RANK0: i8 = 0;
+pub const RANK1: i8 = 1;
+pub const RANK10: i8 = 10;
+/// USIプロトコル表記: 平手初期局面（の盤上の駒配置部分のみ）
+pub const STARTPOS_LN: usize = 57;
+pub const STARTPOS: &'static str = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL";
 
 /// 指し手のために、段をアルファベットにすることを想定
 pub fn num_to_lower_case(num:i8)->&'static str{
@@ -620,4 +623,88 @@ pub fn parse_hand_piece(line:&String, starts:&mut usize, len:usize) -> [i8; HAND
     }//else
 
     return hand_count_arr;
+}
+
+/// position コマンド読取
+pub fn parse_position(
+    line: &String,
+    callback0: fn([i8; HAND_PIECE_ARRAY_LN]),
+    callback1: fn([Piece;100]),
+    callback2: fn(bool, UsiMovement)
+){
+
+    let mut starts = 0;
+
+    // 全体の長さ
+    let len = line.chars().count();
+
+
+
+    let ban : [Piece;100];
+    if 16<(len-starts) && &line[starts..(starts+17)]=="position startpos"{
+        // 'position startpos' を読み飛ばし
+        starts += 17;
+        // 別途用意した平手初期局面文字列を読取
+        let mut local_starts = 0;
+
+        // position コマンド 盤上部分のみ 読取
+        ban = parse_banjo(&STARTPOS.to_string(), &mut local_starts, STARTPOS_LN);
+
+        if 0<(len-starts) && &line[starts..(starts+1)]==" "{
+            // ' ' を読み飛ばした。
+            starts += 1;
+        }
+    }else if 13<(len-starts) && &line[starts..(starts+14)]=="position sfen "{
+        starts += 14; // 'position sfen ' を読み飛ばし
+
+        // position コマンド 盤上部分のみ 読取
+        ban = parse_banjo(&line, &mut starts, len);
+
+        if 0<(len-starts) && &line[starts..(starts+1)]==" "{
+            starts += 1;
+        }
+
+        // 先後も読み飛ばす。
+        if 0<(len-starts) && &line[starts..(starts+1)]=="w"{
+            starts += 1;
+        }else if 0<(len-starts) && &line[starts..(starts+1)]=="b"{
+            starts += 1;
+        }
+
+        if 0<(len-starts) && &line[starts..(starts+1)]==" "{
+            starts += 1;
+        }
+
+        // 持ち駒数。増減させたいので、u8 ではなく i8。
+        let hand_count_arr : [i8; HAND_PIECE_ARRAY_LN] = parse_hand_piece(line, &mut starts, len);
+        callback0(hand_count_arr);
+
+
+        if 2<(len-starts) && &line[starts..(starts+3)]==" 1 "{
+            starts += 3;
+        }
+    }else{
+        panic!("'position startpos' でも、'position sfen ' でも始まらなかった。");
+    }
+
+    // 盤を返す。
+    callback1(ban);
+
+    if 4<(len-starts) && &line[starts..(starts+5)]=="moves"{
+        starts += 5;
+    }
+
+    if 0<(len-starts) && &line[starts..(starts+1)]==" "{
+        starts += 1;
+    }
+
+    // 指し手を1つずつ返すぜ☆（＾～＾）
+    loop {
+        let (successful, umov) = parse_movement(line, &mut starts, len);
+        callback2(successful, umov);
+        if !successful {
+            // 読取終了時(失敗時)。
+            break;
+        }
+    } // loop
 }
