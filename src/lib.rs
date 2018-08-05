@@ -157,16 +157,21 @@ impl fmt::Debug for UsiMovement{
 
 /// 指し手文字列から、打った駒種類を抽出します。
 ///
-/// # Examples.
+/// # Examples input.
 /// 
 /// * `7g7f`
 /// * `B*5e`
 /// * `3d3c+`
+/// 
+/// # Examples return.
+/// 
+/// * (true, ...) - Successful.
+/// * (false, ...) - End parse.
 pub fn parse_movement(
     line: &String,
     starts: &mut usize,
     len: usize
-) -> UsiMovement {
+) -> (bool, UsiMovement) {
 
     let mut result = UsiMovement{
         source_file : -1,
@@ -181,7 +186,7 @@ pub fn parse_movement(
     if (len-*starts)<4{
         // 指し手読取終了時にここを通るぜ☆（＾～＾）
         // 残り４文字もない。
-        return result;
+        return (false, result);
     }
 
     // 1文字目と2文字目
@@ -268,7 +273,7 @@ pub fn parse_movement(
     }
 
     // 残りは「筋の数字」、「段のアルファベット」のはず。成り
-    return result;
+    return (true, result);
 }
 
 
