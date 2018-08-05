@@ -553,3 +553,71 @@ pub fn parse_banjo(line:&String, starts:&mut usize, len:usize) -> [Piece;100] {
     // 盤面を返却
     ban
 }
+
+/// 持ち駒を字句解析
+pub fn parse_hand_piece(line:&String, starts:&mut usize, len:usize) -> [i8; HAND_PIECE_ARRAY_LN]{
+    // 持ち駒数。増減させたいので、u8 ではなく i8。
+    let mut hand_count_arr = [0i8; HAND_PIECE_ARRAY_LN];
+
+    // 持ち駒の読取
+    if 0<(len-*starts) && &line[*starts..(*starts+1)]=="-"{
+        *starts += 1;
+    } else {
+        'mg:loop{
+            if 0<(len-*starts){
+                // 持ち駒の枚数。
+                let mut count = 1;
+                match &line[*starts..(*starts+1)]{
+                    "1"=>{
+                        // 1枚のときは数字は付かないので、10～18 と確定☆
+                        match &line[*starts..(*starts+1)]{
+                            "0"=>{count=10; *starts+=2;},
+                            "1"=>{count=11; *starts+=2;},
+                            "2"=>{count=12; *starts+=2;},
+                            "3"=>{count=13; *starts+=2;},
+                            "4"=>{count=14; *starts+=2;},
+                            "5"=>{count=15; *starts+=2;},
+                            "6"=>{count=16; *starts+=2;},
+                            "7"=>{count=17; *starts+=2;},
+                            "8"=>{count=18; *starts+=2;},
+                            _ => { panic!("[{}] is not hand piece.", &line[*starts..(*starts+2)]);},
+                        }
+                    },
+                    "2"=>{count=2; *starts+=1;},
+                    "3"=>{count=3; *starts+=1;},
+                    "4"=>{count=4; *starts+=1;},
+                    "5"=>{count=5; *starts+=1;},
+                    "6"=>{count=6; *starts+=1;},
+                    "7"=>{count=7; *starts+=1;},
+                    "8"=>{count=8; *starts+=1;},
+                    "9"=>{count=9; *starts+=1;},
+                    _ => {},// 駒の名前なら次へ (エラーの場合は取りこぼす)
+                }
+
+                use Piece::*;
+                let piece : Piece;
+                match &line[*starts..(*starts+1)]{
+                    "R"=>{ piece=R0; *starts+=1; },
+                    "B"=>{ piece=B0; *starts+=1; },
+                    "G"=>{ piece=G0; *starts+=1; },
+                    "S"=>{ piece=S0; *starts+=1; },
+                    "N"=>{ piece=N0; *starts+=1; },
+                    "L"=>{ piece=L0; *starts+=1; },
+                    "P"=>{ piece=P0; *starts+=1; },
+                    "r"=>{ piece=R1; *starts+=1; },
+                    "b"=>{ piece=B1; *starts+=1; },
+                    "g"=>{ piece=G1; *starts+=1; },
+                    "s"=>{ piece=S1; *starts+=1; },
+                    "n"=>{ piece=N1; *starts+=1; },
+                    "l"=>{ piece=L1; *starts+=1; },
+                    "p"=>{ piece=P1; *starts+=1; },
+                    _ => { break 'mg; }, // 持駒部 正常終了
+                }
+
+                hand_count_arr[hand_piece_to_num(piece)] = count;
+            }//if
+        }//loop
+    }//else
+
+    return hand_count_arr;
+}
