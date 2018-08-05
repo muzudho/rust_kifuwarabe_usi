@@ -413,6 +413,26 @@ pub const HAND_PIECE_ARRAY : [Piece; HAND_PIECE_ARRAY_LN] = [
     Piece::L1,// ▽香
     Piece::P1// ▽歩
 ];
+pub fn hand_piece_to_num(pc: Piece) -> usize {
+    use Piece::*;
+    match pc {
+        R0 => return 0,
+        B0 => return 1,
+        G0 => return 2,
+        S0 => return 3,
+        N0 => return 4,
+        L0 => return 5,
+        P0 => return 6,
+        R1 => return 7,
+        B1 => return 8,
+        G1 => return 9,
+        S1 => return 10,
+        N1 => return 11,
+        L1 => return 12,
+        P1 => return 13,
+        _ => panic!("{} is not hand piece.", pc)
+    }
+}
 
 
 
