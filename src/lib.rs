@@ -319,7 +319,8 @@ impl fmt::Debug for UsiMovement{
 }
 
 
-pub fn starts_with(
+/// 開始地点から文字列が一致すれば、カーソルを進めて真を返す。
+pub fn starts_with_and_forward(
     line: &String,
     starts: &mut usize,
     keyword: &str
@@ -330,6 +331,7 @@ pub fn starts_with(
     let keyword_len = keyword.chars().count();
 
     if keyword_len<(line_len-*starts+1) && &line[*starts..(*starts+keyword_len)]==keyword {
+        *starts += keyword_len;
         return true;
     }
     return false;
@@ -451,8 +453,8 @@ pub fn parse_hand_piece(line:&String, starts:&mut usize, len:usize) -> [i8; HAND
     let mut hand_count_arr = [0i8; HAND_PIECE_ARRAY_LN];
 
     // 持ち駒の読取
-    if starts_with(line, starts, "-") {
-        *starts += 1;
+    if starts_with_and_forward(line, starts, "-") {
+        // 持ち駒なし。        
     } else {
         'mg:loop{
             if 0<(len-*starts){
@@ -620,14 +622,12 @@ pub fn parse_movement(
     *starts+=1;
     
     // 5文字に「+」があれば成り。
-    if starts_with(line, starts, "+") {
+    if starts_with_and_forward(line, starts, "+") {
         result.promotion = true;
-        *starts+=1;
     }
 
     // 続きにスペース「 」が１つあれば読み飛ばす
-    if starts_with(line, starts, " ") {
-        *starts+=1;
+    if starts_with_and_forward(line, starts, " ") {
     }
 
     // 残りは「筋の数字」、「段のアルファベット」のはず。成り
@@ -650,38 +650,34 @@ pub fn parse_position(
 
 
     let ban : [Piece;100];
-    if starts_with(line, &mut starts, "position startpos") {
-        // 'position startpos' を読み飛ばし
-        starts += 17;
+    if starts_with_and_forward(line, &mut starts, "position startpos") {
         // 別途用意した平手初期局面文字列を読取
         let mut local_starts = 0;
 
         // position コマンド 盤上部分のみ 読取
         ban = parse_banjo(&STARTPOS.to_string(), &mut local_starts, STARTPOS_LN);
 
-        if starts_with(line, &mut starts, " ") {
-            // ' ' を読み飛ばした。
-            starts += 1;
+        if starts_with_and_forward(line, &mut starts, " ") {
+            // 読み飛ばし。
         }
-    }else if starts_with(line, &mut starts, "position sfen ") {
-        starts += 14; // 'position sfen ' を読み飛ばし
+    }else if starts_with_and_forward(line, &mut starts, "position sfen ") {
 
         // position コマンド 盤上部分のみ 読取
         ban = parse_banjo(&line, &mut starts, len);
 
-        if starts_with(line, &mut starts, " ") {
-            starts += 1;
+        if starts_with_and_forward(line, &mut starts, " ") {
+            // 読み飛ばし。
         }
 
         // 先後も読み飛ばす。
-        if starts_with(line, &mut starts, "w") {
-            starts += 1;
-        }else if starts_with(line, &mut starts, "b") {
-            starts += 1;
+        if starts_with_and_forward(line, &mut starts, "w") {
+            // 読み飛ばし。
+        }else if starts_with_and_forward(line, &mut starts, "b") {
+            // 読み飛ばし。
         }
 
-        if starts_with(line, &mut starts, " ") {
-            starts += 1;
+        if starts_with_and_forward(line, &mut starts, " ") {
+            // 読み飛ばし。
         }
 
         // 持ち駒数。増減させたいので、u8 ではなく i8。
@@ -689,8 +685,8 @@ pub fn parse_position(
         callback0(hand_count_arr);
 
 
-        if starts_with(line, &mut starts, " 1 ") {
-            starts += 3;
+        if starts_with_and_forward(line, &mut starts, " 1 ") {
+            // 読み飛ばし。
         }
     }else{
         panic!("'position startpos' でも、'position sfen ' でも始まらなかった。");
@@ -699,12 +695,12 @@ pub fn parse_position(
     // 盤を返す。
     callback1(ban);
 
-    if starts_with(line, &mut starts, "moves") {
-        starts += 5;
+    if starts_with_and_forward(line, &mut starts, "moves") {
+            // 読み飛ばし。
     }
 
-    if starts_with(line, &mut starts, " ") {
-        starts += 1;
+    if starts_with_and_forward(line, &mut starts, " ") {
+            // 読み飛ばし。
     }
 
     // 指し手を1つずつ返すぜ☆（＾～＾）
