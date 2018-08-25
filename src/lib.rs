@@ -635,11 +635,12 @@ pub fn parse_movement(
 }
 
 /// position コマンド読取
-pub fn parse_position(
+pub fn parse_position<T>(
+    t: &mut T,
     line: &String,
     callback0: fn([i8; HAND_PIECE_ARRAY_LN]),
     callback1: fn([Piece;100]),
-    callback2: fn(bool, UsiMovement)
+    callback2: fn(bool, UsiMovement, &mut T)
 ){
 
     let mut starts = 0;
@@ -706,7 +707,7 @@ pub fn parse_position(
     // 指し手を1つずつ返すぜ☆（＾～＾）
     loop {
         let (successful, umov) = parse_movement(line, &mut starts, len);
-        callback2(successful, umov);
+        callback2(successful, umov, t);
         if !successful {
             // 読取終了時(失敗時)。
             break;
