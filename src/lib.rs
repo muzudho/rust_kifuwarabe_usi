@@ -638,9 +638,9 @@ pub fn parse_movement(
 pub fn parse_position<T>(
     t: &mut T,
     line: &String,
-    callback0: fn([i8; HAND_PIECE_ARRAY_LN]),
-    callback1: fn([Piece;100]),
-    callback2: fn(bool, UsiMovement, &mut T)
+    callback0: fn(&mut T, [i8; HAND_PIECE_ARRAY_LN]),
+    callback1: fn(&mut T, [Piece;100]),
+    callback2: fn(&mut T, bool, UsiMovement)
 ){
 
     let mut starts = 0;
@@ -683,7 +683,7 @@ pub fn parse_position<T>(
 
         // 持ち駒数。増減させたいので、u8 ではなく i8。
         let hand_count_arr : [i8; HAND_PIECE_ARRAY_LN] = parse_hand_piece(line, &mut starts, len);
-        callback0(hand_count_arr);
+        callback0(t, hand_count_arr);
 
 
         if starts_with_and_forward(line, &mut starts, " 1 ") {
@@ -694,7 +694,7 @@ pub fn parse_position<T>(
     }
 
     // 盤を返す。
-    callback1(ban);
+    callback1(t, ban);
 
     if starts_with_and_forward(line, &mut starts, "moves") {
             // 読み飛ばし。
@@ -707,7 +707,7 @@ pub fn parse_position<T>(
     // 指し手を1つずつ返すぜ☆（＾～＾）
     loop {
         let (successful, umov) = parse_movement(line, &mut starts, len);
-        callback2(successful, umov, t);
+        callback2(t, successful, umov);
         if !successful {
             // 読取終了時(失敗時)。
             break;
