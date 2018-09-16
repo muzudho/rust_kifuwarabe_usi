@@ -32,7 +32,7 @@ pub fn file_rank_to_cell(file:i8, rank:i8)->usize{
     (file*10 + rank) as usize
 }
 pub const STARTPOS_LN: usize = 57;
-pub const STARTPOS: &'static str = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL";
+pub const STARTPOS: &str = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL";
 
 /// 駒種類。先後なしの駒と空白。
 #[derive(Copy, Clone)]
@@ -218,20 +218,20 @@ pub const HAND_PIECE_ARRAY : [Piece; HAND_PIECE_ARRAY_LN] = [
 pub fn hand_piece_to_num(pc: Piece) -> usize {
     use Piece::*;
     match pc {
-        R0 => return 0,
-        B0 => return 1,
-        G0 => return 2,
-        S0 => return 3,
-        N0 => return 4,
-        L0 => return 5,
-        P0 => return 6,
-        R1 => return 7,
-        B1 => return 8,
-        G1 => return 9,
-        S1 => return 10,
-        N1 => return 11,
-        L1 => return 12,
-        P1 => return 13,
+        R0 => 0,
+        B0 => 1,
+        G0 => 2,
+        S0 => 3,
+        N0 => 4,
+        L0 => 5,
+        P0 => 6,
+        R1 => 7,
+        B1 => 8,
+        G1 => 9,
+        S1 => 10,
+        N1 => 11,
+        L1 => 12,
+        P1 => 13,
         _ => panic!("{} is not hand piece.", pc)
     }
 }
@@ -257,7 +257,7 @@ pub struct UsiMovement{
     pub promotion : bool,
 }
 impl UsiMovement{
-    pub fn new()->UsiMovement{
+    pub fn default()->UsiMovement{
         UsiMovement{
             source_file : 0,
             source_rank : 0,
@@ -321,7 +321,7 @@ impl fmt::Debug for UsiMovement{
 
 /// 開始地点から文字列が一致すれば、カーソルを進めて真を返す。
 pub fn starts_with_and_forward(
-    line: &String,
+    line: &str,
     starts: &mut usize,
     keyword: &str
 ) -> bool {
@@ -334,12 +334,12 @@ pub fn starts_with_and_forward(
         *starts += keyword_len;
         return true;
     }
-    return false;
+    false
 }
 
 
 /// position コマンドの盤上部分のみ 字句解析。
-pub fn parse_banjo(line:&String, starts:&mut usize, len:usize) -> [Piece;100] {
+pub fn parse_banjo(line:&str, starts:&mut usize, len:usize) -> [Piece;100] {
 
     use Piece::Space;
     // 初期局面の盤面
@@ -448,7 +448,7 @@ pub fn parse_banjo(line:&String, starts:&mut usize, len:usize) -> [Piece;100] {
 }
 
 /// 持ち駒を字句解析
-pub fn parse_hand_piece(line:&String, starts:&mut usize, len:usize) -> [i8; HAND_PIECE_ARRAY_LN]{
+pub fn parse_hand_piece(line:&str, starts:&mut usize, len:usize) -> [i8; HAND_PIECE_ARRAY_LN]{
     // 持ち駒数。増減させたいので、u8 ではなく i8。
     let mut hand_count_arr = [0i8; HAND_PIECE_ARRAY_LN];
 
@@ -512,7 +512,7 @@ pub fn parse_hand_piece(line:&String, starts:&mut usize, len:usize) -> [i8; HAND
         }//loop
     }//else
 
-    return hand_count_arr;
+    hand_count_arr
 }
 
 /// 指し手文字列から、打った駒種類を抽出します。
@@ -528,7 +528,7 @@ pub fn parse_hand_piece(line:&String, starts:&mut usize, len:usize) -> [i8; HAND
 /// * (true, ...) - Successful.
 /// * (false, ...) - End parse.
 pub fn parse_movement(
-    line: &String,
+    line: &str,
     starts: &mut usize,
     len: usize
 ) -> (bool, UsiMovement) {
@@ -631,13 +631,13 @@ pub fn parse_movement(
     }
 
     // 残りは「筋の数字」、「段のアルファベット」のはず。成り
-    return (true, result);
+    (true, result)
 }
 
 /// position コマンド読取
 pub fn parse_position<T>(
     t: &mut T,
-    line: &String,
+    line: &str,
     callback0: fn(&mut T, [i8; HAND_PIECE_ARRAY_LN]),
     callback1: fn(&mut T, [Piece;100]),
     callback2: fn(&mut T, bool, UsiMovement)
@@ -671,9 +671,7 @@ pub fn parse_position<T>(
         }
 
         // 先後も読み飛ばす。
-        if starts_with_and_forward(line, &mut starts, "w") {
-            // 読み飛ばし。
-        }else if starts_with_and_forward(line, &mut starts, "b") {
+        if starts_with_and_forward(line, &mut starts, "w") || starts_with_and_forward(line, &mut starts, "b") {
             // 読み飛ばし。
         }
 
