@@ -339,7 +339,7 @@ pub fn starts_with_and_forward(
 
 
 /// position コマンドの盤上部分のみ 字句解析。
-pub fn parse_banjo(line:&str, starts:&mut usize, len:usize) -> [Piece;100] {
+pub fn parse_board(line:&str, starts:&mut usize, len:usize) -> [Piece;100] {
 
     use Piece::Space;
     // 初期局面の盤面
@@ -632,83 +632,4 @@ pub fn parse_movement(
 
     // 残りは「筋の数字」、「段のアルファベット」のはず。成り
     (true, result)
-}
-
-/// position コマンド読取
-pub fn parse_position<T>(
-    t: &mut T,
-    line: &str,
-    callback0: fn(&mut T, [i8; HAND_PIECE_ARRAY_LN]),
-    callback1: fn(&mut T, [Piece;100]),
-    callback2: fn(&mut T, bool, UsiMovement)
-){
-
-    let mut starts = 0;
-
-    // 全体の長さ
-    let len = line.chars().count();
-
-
-
-    let ban : [Piece;100];
-    if starts_with_and_forward(line, &mut starts, "position startpos") {
-        // 別途用意した平手初期局面文字列を読取
-        let mut local_starts = 0;
-
-        // position コマンド 盤上部分のみ 読取
-        ban = parse_banjo(&STARTPOS.to_string(), &mut local_starts, STARTPOS_LN);
-
-        if starts_with_and_forward(line, &mut starts, " ") {
-            // 読み飛ばし。
-        }
-    }else if starts_with_and_forward(line, &mut starts, "position sfen ") {
-
-        // position コマンド 盤上部分のみ 読取
-        ban = parse_banjo(&line, &mut starts, len);
-
-        if starts_with_and_forward(line, &mut starts, " ") {
-            // 読み飛ばし。
-        }
-
-        // 先後も読み飛ばす。
-        if starts_with_and_forward(line, &mut starts, "w") || starts_with_and_forward(line, &mut starts, "b") {
-            // 読み飛ばし。
-        }
-
-        if starts_with_and_forward(line, &mut starts, " ") {
-            // 読み飛ばし。
-        }
-
-        // 持ち駒数。増減させたいので、u8 ではなく i8。
-        let hand_count_arr : [i8; HAND_PIECE_ARRAY_LN] = parse_hand_piece(line, &mut starts, len);
-        callback0(t, hand_count_arr);
-
-
-        if starts_with_and_forward(line, &mut starts, " 1 ") {
-            // 読み飛ばし。
-        }
-    }else{
-        panic!("'position startpos' でも、'position sfen ' でも始まらなかった。");
-    }
-
-    // 盤を返す。
-    callback1(t, ban);
-
-    if starts_with_and_forward(line, &mut starts, "moves") {
-            // 読み飛ばし。
-    }
-
-    if starts_with_and_forward(line, &mut starts, " ") {
-            // 読み飛ばし。
-    }
-
-    // 指し手を1つずつ返すぜ☆（＾～＾）
-    loop {
-        let (successful, umov) = parse_movement(line, &mut starts, len);
-        callback2(t, successful, umov);
-        if !successful {
-            // 読取終了時(失敗時)。
-            break;
-        }
-    } // loop
 }
